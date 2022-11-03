@@ -1,1 +1,1 @@
-ghc -o $1 $1.hs
+ghc $1.hs -o bin/$1 -odir bin -hidir bin
