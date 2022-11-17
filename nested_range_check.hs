@@ -30,50 +30,62 @@
 -- pragmas.hs }}}
 module Main where
 
-import           Control.Monad            (replicateM_)
+import           Control.Monad            (replicateM, replicateM_)
 import           Data.Array               (Array, (!))
+import           Data.Bool                (bool)
 import qualified Data.ByteString          as BS
 import qualified Data.ByteString.Char8    as C
 import qualified Data.ByteString.Internal as BSI
-import qualified Data.IntMap.Strict       as IntMap
+import qualified Data.IntMap              as IntMap
 import           Data.Ix                  (Ix)
-import           Data.List                (scanl')
-import qualified Data.Map                 as Map
-import           Data.Maybe               (fromJust)
-import qualified Data.Set                 as Set
+import           Data.List
 import           Debug.Trace              (trace)
 
-decreaseFreq :: Int -> Map.Map Int Int -> Map.Map Int Int
-decreaseFreq n mp
-  | curFreq == 1 = Map.delete n mp
-  | otherwise = Map.insert n (curFreq - 1) mp
+-- sorted list
+solve' :: [Int] -> [Bool]
+solve' xs = zipWith (<=) xs maxes
   where
-  curFreq =   mp Map.! n
+  maxes = scanl' max (-1) xs
 
-increaseFreq :: Int -> Map.Map Int Int -> Map.Map Int Int
-increaseFreq n mp =  Map.insert n (curFreq + 1) mp
+solve'' :: [Int] -> [Bool]
+solve'' xs = reverse $ zipWith (>=) rxs mins
   where
-  curFreq =  Map.findWithDefault 0 n mp
+  rxs = reverse xs
+  mins = scanl' min inf rxs
 
-solve :: Int -> [Int] -> [Int]
-solve x queries = fst . Map.findMax . snd <$> drop 1 (scanl' op (initPos, initFreq) queries)
+inf :: Int
+inf = floor (1e9 + 10)
+
+indexList :: [Int]
+indexList = [1..]
+
+sortByIndex :: [Int] -> [a] -> [a]
+sortByIndex indexes lst = fmap snd $ sortOn fst $ zip indexes lst
+
+solve :: [(Int, Int)] -> ([Bool], [Bool])
+solve xs = (ans, ans')
   where
-  initFreq = Map.singleton x 1
-  initPos = Set.fromList [0, x]
-  op (pos, freq) query =  (newPos, newFreq)
-    where
-    left = fromJust $ Set.lookupLT query pos
-    right = fromJust $ Set.lookupGT query pos
-    newPos = Set.insert query pos
-    newFreq = increaseFreq (query - left)
-            $ increaseFreq (right - query)
-            $ decreaseFreq (right - left) freq
+  sorted = sortBy cmp $ zip indexList xs
+  indexes = fmap fst sorted
+  ends = fmap (snd . snd) sorted
+  ans = sortByIndex indexes $ solve'' ends
+  ans' = sortByIndex indexes $ solve' ends
+  getLow = fst . snd
+  getHigh = snd . snd
+  cmp a b
+    | getLow a == getLow b = compare (getHigh b) (getHigh a)
+    | otherwise = compare (getLow a) (getLow b)
+
+toString :: [Bool] -> String
+toString = unwords . fmap (bool "0" "1")
 
 main :: IO ()
 main = do
-  (x, _) <- getInt2
-  queries <- getInts
-  mapM_ print $ solve x queries
+  n <- getInt
+  xs <- replicateM n getInt2
+  let (ans, ans') = solve xs
+  putStrLn $ toString ans
+  putStrLn $ toString ans'
 
 readInt :: C.ByteString -> Int
 readInt s = let Just (i,_) = C.readInt s in i :: Int

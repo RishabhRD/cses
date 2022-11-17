@@ -35,45 +35,34 @@ import           Data.Array               (Array, (!))
 import qualified Data.ByteString          as BS
 import qualified Data.ByteString.Char8    as C
 import qualified Data.ByteString.Internal as BSI
-import qualified Data.IntMap.Strict       as IntMap
+import qualified Data.IntMap              as IntMap
 import           Data.Ix                  (Ix)
-import           Data.List                (scanl')
-import qualified Data.Map                 as Map
-import           Data.Maybe               (fromJust)
-import qualified Data.Set                 as Set
+import           Data.List                (intercalate)
 import           Debug.Trace              (trace)
 
-decreaseFreq :: Int -> Map.Map Int Int -> Map.Map Int Int
-decreaseFreq n mp
-  | curFreq == 1 = Map.delete n mp
-  | otherwise = Map.insert n (curFreq - 1) mp
+solve' :: [Int] -> [Int]
+solve' [] = []
+solve' [x] = [x]
+solve' xs = left ++ right
   where
-  curFreq =   mp Map.! n
+  n = length xs
+  zipped = zip xs [1..]
+  left = fst <$> filter (even.snd) zipped
+  right = solve' other
+  other' = fst <$> filter (odd.snd) zipped
+  nother = length other'
+  other
+    | even n = other'
+    | otherwise = take nother $ drop (nother - 1) $ cycle other'
 
-increaseFreq :: Int -> Map.Map Int Int -> Map.Map Int Int
-increaseFreq n mp =  Map.insert n (curFreq + 1) mp
-  where
-  curFreq =  Map.findWithDefault 0 n mp
-
-solve :: Int -> [Int] -> [Int]
-solve x queries = fst . Map.findMax . snd <$> drop 1 (scanl' op (initPos, initFreq) queries)
-  where
-  initFreq = Map.singleton x 1
-  initPos = Set.fromList [0, x]
-  op (pos, freq) query =  (newPos, newFreq)
-    where
-    left = fromJust $ Set.lookupLT query pos
-    right = fromJust $ Set.lookupGT query pos
-    newPos = Set.insert query pos
-    newFreq = increaseFreq (query - left)
-            $ increaseFreq (right - query)
-            $ decreaseFreq (right - left) freq
+solve :: Int -> [Int]
+solve n = solve' [1..n]
 
 main :: IO ()
 main = do
-  (x, _) <- getInt2
-  queries <- getInts
-  mapM_ print $ solve x queries
+  n <- getInt
+  let res = solve n
+  putStrLn $ unwords $ show <$> res
 
 readInt :: C.ByteString -> Int
 readInt s = let Just (i,_) = C.readInt s in i :: Int
