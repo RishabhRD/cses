@@ -39,35 +39,29 @@ template <typename T> std::vector<T> read_matrix(int m, int n) {
   return vec;
 }
 
-using ll = long long;
+using ll = int;
 
 constexpr ll mod = 1e9 + 7;
 
-void solve(std::vector<ll> const &coins, ll n, std::set<std::vector<ll>> &res,
-           std::vector<ll> &dp) {
-  if (n < 0)
-    return 0;
-  else if (n == 0)
-    return 1;
-  else {
-    if (dp[n] != -1)
-      return dp[n];
-    ll ans = 0;
-    for (auto coin : coins) {
-      ans = (ans + solve(coins, n - coin, dp)) % mod;
+ll solve(std::vector<ll> &coins, ll k) {
+  auto const n = std::size(coins);
+  std::vector dp(n + 1, std::vector(k + 1, 0));
+  dp[0][0] = 1;
+  for (ll i = 1; i <= n; ++i) {
+    for (ll j = 0; j <= k; ++j) {
+      dp[i][j] = dp[i - 1][j];
+      if (j - coins[i - 1] >= 0) {
+        dp[i][j] += dp[i][j - coins[i - 1]];
+      }
+      dp[i][j] %= mod;
     }
-    return dp[n] = ans;
   }
-}
-
-ll solve(std::vector<ll> const &coins, ll n) {
-  std::vector<ll> dp(n + 1, -1);
-  return solve(coins, n, dp);
+  return dp[n][k];
 }
 
 int main() {
   auto const n = read<ll>();
   auto const k = read<ll>();
-  auto const coins = read_vec<ll>(n);
+  auto coins = read_vec<ll>(n);
   std::cout << solve(coins, k) << std::endl;
 }
